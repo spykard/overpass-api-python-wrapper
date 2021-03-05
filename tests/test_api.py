@@ -54,6 +54,13 @@ def test_geojson_extended():
     ref_geo = geojson.load(open(os.path.join(os.path.dirname(__file__), "example.json"), "r"))
     assert osm_geo==ref_geo
 
+def test_multipolygon():
+    """
+    Test that multipolygons are processed without error
+    """
+    api = overpass.API()
+    api.get("rel(11038555)", verbosity="body geom")
+
 
 def test_slots_available():
     api = overpass.API(debug=True)
