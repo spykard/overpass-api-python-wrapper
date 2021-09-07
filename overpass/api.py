@@ -7,7 +7,9 @@ import csv
 import json
 import logging
 import re
-from datetime import datetime
+import sys
+
+from datetime import datetime, timezone
 from io import StringIO
 
 import requests
@@ -140,6 +142,16 @@ class API(object):
         """
         :returns: dict describing the client's status with the API
         """
+
+        def _strptime(date_string):
+            if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
+                return datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S%z')
+
+            dt = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+            kwargs = {k: getattr(dt, k) for k in ('year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond')}
+            kwargs['tzinfo'] = timezone.utc
+            return datetime(**kwargs)
+
         endpoint = "https://overpass-api.de/api/status"
 
         r = requests.get(endpoint)
@@ -153,24 +165,14 @@ class API(object):
         )
 
         waiting_re = re.compile(r'(?<=Slot available after: )[\d\-TZ:]{20}')
-        waiting_slots = tuple(
-            datetime.strptime(
-                waiting_re.search(line).group(), "%Y-%m-%dT%H:%M:%S%z"
-            )
-            for line in lines if waiting_re.search(line)
-        )
+        waiting_slots = tuple(_strptime(waiting_re.search(line).group()) for line in lines if waiting_re.search(line))
 
         current_idx = next(
             i for i, word in enumerate(lines)
             if word.startswith('Currently running queries')
         )
         running_slots = tuple(tuple(line.split()) for line in lines[current_idx + 1:])
-        running_slots_datetimes = tuple(
-            datetime.strptime(
-                slot[3], "%Y-%m-%dT%H:%M:%S%z"
-            )
-            for slot in running_slots
-        )
+        running_slots_datetimes = tuple(_strptime(slot[3]) for slot in running_slots)
 
         return {
             "available_slots": available_slots,
@@ -202,6 +204,16 @@ class API(object):
     def search(self, feature_type, regex=False):
         """Search for something."""
         raise NotImplementedError()
+
+    def __deprecation_get(self, *args, **kwargs):
+        import warnings
+        warnings.warn('Call to deprecated function "Get", use "get" function instead', DeprecationWarning)
+        return self.get(*args, **kwargs)
+
+    def __deprecation_search(self, *args, **kwargs):
+        import warnings
+        warnings.warn('Call to deprecated function "Search", use "search" function instead', DeprecationWarning)
+        return self.search(*args, **kwargs)
 
     # deprecation of upper case functions
     Get = get
