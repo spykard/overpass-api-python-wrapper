@@ -216,8 +216,8 @@ class API(object):
         return self.search(*args, **kwargs)
 
     # deprecation of upper case functions
-    Get = get
-    Search = search
+    Get = __deprecation_get
+    Search = __deprecation_search
 
     def _construct_ql_query(self, userquery, responseformat, verbosity, date):
         raw_query = str(userquery).rstrip()

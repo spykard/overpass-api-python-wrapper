@@ -3,8 +3,8 @@
 # which is licensed under Apache 2.0.
 # See LICENSE.txt for the full license text.
 
+import json
 import overpass
-import geojson
 import pickle
 import pytest
 
@@ -44,17 +44,25 @@ def test_geojson_extended(requests):
 
     api = API()
     osm_geo = api.get("rel(6518385);out body geom;way(10322303);out body geom;node(4927326183);", verbosity='body geom')
-    ref_geo = geojson.loads(load_resource('example.json'))
+
+    ref_geo = json.loads(load_resource('example.json'))
     assert osm_geo == ref_geo
     assert not requests.get.called
     assert not requests.post.called
 
-def test_multipolygon():
+
+def test_multipolygon(requests):
     """
     Test that multipolygons are processed without error
     """
+    requests.response._content = load_resource('multipolygon_response.json')
+
     api = overpass.API()
-    api.get("rel(11038555)", verbosity="body geom")
+    result = api.get("rel(11038555)", verbosity="body geom")
+
+    assert not requests.get.called
+    assert requests.post.called
+    assert result == json.loads(load_resource('multipolygon.json'))
 
 
 @pytest.mark.parametrize('status_code, class_error, error_str', PARAM_ERRORS)
