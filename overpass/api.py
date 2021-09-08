@@ -7,7 +7,6 @@ import csv
 import json
 import logging
 import re
-import sys
 
 from datetime import datetime, timezone
 from io import StringIO
@@ -15,6 +14,7 @@ from io import StringIO
 import requests
 from osm2geojson import json2geojson
 
+from overpass import dependency
 from .errors import (
     MultipleRequestsError,
     OverpassSyntaxError,
@@ -144,13 +144,14 @@ class API(object):
         """
 
         def _strptime(date_string):
-            if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
-                return datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S%z')
+            if dependency.Python.less_3_7():
+                dt = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+                kwargs = {k: getattr(dt, k) for k in ('year', 'month', 'day',
+                                                      'hour', 'minute', 'second', 'microsecond')}
+                kwargs['tzinfo'] = timezone.utc
+                return datetime(**kwargs)
 
-            dt = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
-            kwargs = {k: getattr(dt, k) for k in ('year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond')}
-            kwargs['tzinfo'] = timezone.utc
-            return datetime(**kwargs)
+            return datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S%z')
 
         endpoint = "https://overpass-api.de/api/status"
 
