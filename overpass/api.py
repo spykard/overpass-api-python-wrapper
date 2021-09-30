@@ -7,6 +7,7 @@ import csv
 import json
 import logging
 import re
+import warnings
 
 from datetime import datetime, timezone
 from io import StringIO
@@ -318,14 +319,14 @@ class API(object):
                         if points and points[-1] == points[0]:
                             polygons.append([points])
                         else:
-                            raise UnknownOverpassError("Received corrupt data from Overpass (incomplete polygon).")
+                            warnings.warn("Received corrupt data from Overpass (incomplete polygon).")
                 # Then get the inner polygons
                 for member in elem.get("members", []):
                     if member["role"] == "inner":
                         points = [(coords["lon"], coords["lat"]) for coords in member.get("geometry", [])]
                         # Check that the inner polygon is complete
                         if not points or points[-1] != points[0]:
-                            raise UnknownOverpassError("Received corrupt data from Overpass (incomplete polygon).")
+                            warnings.warn("Received corrupt data from Overpass (incomplete polygon).")
                         # We need to check to which outer polygon the inner polygon belongs
                         point = Point(points[0])
                         for poly in polygons:
@@ -334,8 +335,7 @@ class API(object):
                                 poly.append(points)
                                 break
                         else:
-                            raise UnknownOverpassError("Received corrupt data from Overpass (inner polygon cannot "
-                                                       "be matched to outer polygon).")
+                            warnings.warn("Received corrupt data from Overpass (inner polygon cannot be matched to outer polygon).")
                 # Finally create MultiPolygon geometry
                 if polygons:
                     geometry = geojson.MultiPolygon(polygons)
